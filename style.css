@@ -1,0 +1,400 @@
+:root {
+  color-scheme: light;
+  font-family: Inter, ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  background: #f3f2ed;
+  color: #181a18;
+  font-synthesis: none;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  min-width: 320px;
+  min-height: 100vh;
+  margin: 0;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+}
+
+.panel {
+  width: min(720px, 100%);
+  min-height: 480px;
+  display: flex;
+  flex-direction: column;
+  padding: 28px;
+  background: #fffefa;
+  border: 1px solid #deddd7;
+  border-radius: 24px;
+  box-shadow: 0 24px 70px rgb(29 31 27 / 8%);
+}
+
+.toolbar,
+.sensors {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+}
+
+.distance {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  color: #666a64;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.input-wrap {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 0 12px;
+  height: 42px;
+  background: #f2f1ec;
+  border: 1px solid transparent;
+  border-radius: 12px;
+  color: #7d807a;
+  transition: border-color 160ms, background 160ms;
+}
+
+.input-wrap:focus-within {
+  background: #fffefa;
+  border-color: #959992;
+}
+
+input {
+  width: 82px;
+  border: 0;
+  outline: 0;
+  padding: 0;
+  background: transparent;
+  color: #181a18;
+  font: inherit;
+  font-size: 16px;
+  font-variant-numeric: tabular-nums;
+}
+
+button {
+  height: 42px;
+  display: inline-flex;
+  align-items: center;
+  gap: 9px;
+  border: 0;
+  border-radius: 999px;
+  padding: 0 17px;
+  background: #1c1f1b;
+  color: white;
+  font: inherit;
+  font-size: 14px;
+  font-weight: 650;
+  cursor: pointer;
+  transition: transform 120ms, background 160ms;
+}
+
+button:hover {
+  background: #31352f;
+}
+
+button:active {
+  transform: scale(0.98);
+}
+
+button:disabled {
+  cursor: wait;
+  opacity: 0.72;
+}
+
+.direction {
+  display: flex;
+  gap: 3px;
+  padding: 3px;
+  border-radius: 12px;
+  background: #f2f1ec;
+}
+
+.direction-option {
+  height: 36px;
+  min-width: 54px;
+  justify-content: center;
+  padding: 0 11px;
+  border-radius: 9px;
+  background: transparent;
+  color: #747871;
+  font-size: 13px;
+  font-weight: 650;
+}
+
+.direction-option:hover {
+  background: rgb(255 255 255 / 55%);
+}
+
+.direction-option.active,
+.direction-option.active:hover {
+  background: #fffefa;
+  color: #191b18;
+  box-shadow: 0 1px 4px rgb(30 32 28 / 10%);
+}
+
+button:focus-visible,
+input:focus-visible {
+  outline: 3px solid rgb(65 113 235 / 28%);
+  outline-offset: 2px;
+}
+
+.connection-dot,
+.sensor-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #9a9d97;
+}
+
+button.connected .connection-dot {
+  background: #72dd86;
+  box-shadow: 0 0 0 4px rgb(114 221 134 / 15%);
+}
+
+.sensors {
+  justify-content: center;
+  margin-top: 56px;
+}
+
+.sensor {
+  min-width: 136px;
+  height: 54px;
+  display: grid;
+  grid-template-columns: auto auto 1fr;
+  align-items: center;
+  gap: 10px;
+  padding: 0 17px;
+  border: 1px solid #e0dfd9;
+  border-radius: 15px;
+  color: #7c8079;
+  font-size: 14px;
+}
+
+.sensor strong {
+  justify-self: end;
+  color: #4e524c;
+  font-size: 13px;
+  font-weight: 650;
+}
+
+.sensor.unblocked .sensor-dot {
+  background: #43b965;
+  box-shadow: 0 0 0 5px rgb(67 185 101 / 12%);
+}
+
+.sensor.blocked .sensor-dot {
+  background: #ec615e;
+  box-shadow: 0 0 0 5px rgb(236 97 94 / 12%);
+}
+
+.velocity {
+  flex: 1 0 190px;
+  display: flex;
+  align-items: baseline;
+  justify-content: center;
+  gap: 14px;
+  padding-top: 74px;
+  color: #141613;
+}
+
+.trials {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  align-items: start;
+  gap: 12px;
+}
+
+#save {
+  min-width: 76px;
+  justify-content: center;
+}
+
+.trial-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+#copy {
+  min-width: 76px;
+  justify-content: center;
+  background: #e8e7e1;
+  color: #393c37;
+}
+
+#copy:hover {
+  background: #deddd7;
+}
+
+#clear {
+  min-width: 76px;
+  justify-content: center;
+  background: transparent;
+  color: #b04d49;
+  box-shadow: inset 0 0 0 1px #e2c5c2;
+}
+
+#clear:hover:not(:disabled) {
+  background: #f8e9e7;
+}
+
+#clear:disabled {
+  cursor: default;
+  color: #b7aaa8;
+  opacity: 0.6;
+}
+
+#save:disabled {
+  cursor: default;
+  background: #d8d8d2;
+  color: #8c8f89;
+  opacity: 1;
+}
+
+.table-wrap {
+  width: 100%;
+  height: 150px;
+  overflow: auto;
+  border: 1px solid #deddd7;
+  border-radius: 13px;
+  background: #f7f6f1;
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+  table-layout: fixed;
+  color: #292b27;
+  font-size: 13px;
+}
+
+th {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  height: 34px;
+  padding: 0 12px;
+  background: #efeee9;
+  color: #777a74;
+  font-size: 11px;
+  font-weight: 700;
+  text-align: left;
+  text-transform: uppercase;
+  letter-spacing: 0.045em;
+}
+
+th:first-child,
+td:first-child {
+  width: 46px;
+  color: #959891;
+  text-align: center;
+}
+
+th:nth-child(2),
+td:nth-child(2) {
+  width: 112px;
+  font-variant-numeric: tabular-nums;
+}
+
+td {
+  height: 36px;
+  border-top: 1px solid #e3e2dc;
+  padding: 7px 12px;
+  vertical-align: middle;
+}
+
+td[contenteditable="true"] {
+  outline: 0;
+  cursor: text;
+}
+
+td[contenteditable="true"]:focus {
+  background: #fffefa;
+  box-shadow: inset 0 0 0 1px #959992;
+}
+
+td.notes:empty::before {
+  color: #afb1ac;
+  content: "Optional";
+}
+
+.velocity span {
+  font-size: clamp(68px, 15vw, 122px);
+  font-weight: 680;
+  letter-spacing: -0.075em;
+  line-height: 0.9;
+  font-variant-numeric: tabular-nums;
+}
+
+.velocity small {
+  color: #858981;
+  font-size: 20px;
+  font-weight: 600;
+}
+
+@media (max-width: 540px) {
+  body {
+    padding: 0;
+  }
+
+  .panel {
+    min-height: 100vh;
+    border: 0;
+    border-radius: 0;
+    padding: 22px 18px;
+  }
+
+  .toolbar {
+    align-items: flex-end;
+    flex-wrap: wrap;
+  }
+
+  .distance {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 6px;
+  }
+
+  .sensors {
+    margin-top: 48px;
+  }
+
+  .direction {
+    order: 3;
+    width: 100%;
+  }
+
+  .direction-option {
+    flex: 1;
+  }
+
+  .sensor {
+    min-width: 0;
+    width: 50%;
+  }
+
+  .velocity {
+    flex-basis: 170px;
+    padding-top: 10vh;
+  }
+
+  .trials {
+    grid-template-columns: 1fr;
+  }
+
+  .trial-actions {
+    flex-direction: row;
+    justify-self: end;
+  }
+
+  .table-wrap {
+    height: 180px;
+  }
+}
