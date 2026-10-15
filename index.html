@@ -4,22 +4,23 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta name="theme-color" content="#f3f2ed" />
+    <link rel="icon" href="data:," />
     <title>Beam Velocity</title>
-    <link rel="stylesheet" href="style.css" />
+    <link rel="stylesheet" href="style.css?v=11" />
   </head>
   <body>
     <main class="panel">
       <div class="toolbar">
         <label class="distance">
-          <span>Distance</span>
+          <span>Spacing</span>
           <span class="input-wrap">
-            <input id="distance" type="number" min="0.001" step="0.1" value="100" inputmode="decimal" />
+            <input id="distance" type="number" min="0.001" step="0.1" value="50" inputmode="decimal" />
             <span>mm</span>
           </span>
         </label>
         <div class="direction" role="group" aria-label="Accepted direction">
-          <button class="direction-option" type="button" data-direction="12">1→2</button>
-          <button class="direction-option" type="button" data-direction="21">2→1</button>
+          <button class="direction-option" type="button" data-direction="15">1→5</button>
+          <button class="direction-option" type="button" data-direction="51">5→1</button>
           <button class="direction-option active" type="button" data-direction="both">Both</button>
         </div>
         <button id="connect" type="button">
@@ -39,12 +40,28 @@
           <span>2</span>
           <strong>—</strong>
         </div>
+        <div class="sensor" id="sensor3">
+          <span class="sensor-dot"></span><span>3</span><strong>—</strong>
+        </div>
+        <div class="sensor" id="sensor4">
+          <span class="sensor-dot"></span><span>4</span><strong>—</strong>
+        </div>
+        <div class="sensor" id="sensor5">
+          <span class="sensor-dot"></span><span>5</span><strong>—</strong>
+        </div>
       </section>
 
       <output class="velocity" aria-live="polite">
         <span id="velocity">—</span>
         <small>m/s</small>
       </output>
+
+      <div class="segments" aria-label="Interval velocities in meters per second">
+        <div><span>1–2</span><output id="v12">—</output></div>
+        <div><span>2–3</span><output id="v23">—</output></div>
+        <div><span>3–4</span><output id="v34">—</output></div>
+        <div><span>4–5</span><output id="v45">—</output></div>
+      </div>
 
       <section class="trials">
         <div class="trial-actions">
@@ -66,6 +83,6 @@
         </div>
       </section>
     </main>
-    <script src="app.js?v=10"></script>
+    <script src="app.js?v=11"></script>
   </body>
 </html>

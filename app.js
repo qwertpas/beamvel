@@ -9,7 +9,8 @@ const saveButton = document.querySelector("#save");
 const copyButton = document.querySelector("#copy");
 const clearButton = document.querySelector("#clear");
 const trialRows = document.querySelector("#trial-rows");
-const sensors = [document.querySelector("#sensor1"), document.querySelector("#sensor2")];
+const sensors = [...document.querySelectorAll(".sensor")];
+const segments = ["v12", "v23", "v34", "v45"].map((id) => document.getElementById(id));
 const directionButtons = [...document.querySelectorAll(".direction-option")];
 
 let port;
@@ -21,14 +22,15 @@ let writeQueue = Promise.resolve();
 let currentVelocity;
 let trialCount = 0;
 
-const savedDistance = localStorage.getItem("distanceMm");
+const savedDistance = localStorage.getItem("spacingMm");
 if (savedDistance) distanceInput.value = savedDistance;
 
-let selectedDirection = localStorage.getItem("direction") ?? "both";
+let selectedDirection = localStorage.getItem("travelDirection") ?? "both";
+if (!["15", "51", "both"].includes(selectedDirection)) selectedDirection = "both";
 
 function selectDirection(direction, transmit = true) {
   selectedDirection = direction;
-  localStorage.setItem("direction", direction);
+  localStorage.setItem("travelDirection", direction);
   directionButtons.forEach((button) => {
     button.classList.toggle("active", button.dataset.direction === direction);
   });
@@ -50,23 +52,35 @@ function setSensor(index, isUnblocked) {
 }
 
 function handleLine(line) {
-  const state = line.match(/^STATE sensor=([12]) blocked=([01])/);
+  if (line.startsWith("TRIAL ")) {
+    segments.forEach((output) => { output.textContent = "—"; });
+    return;
+  }
+  const segment = line.match(/^SEGMENT pair=([1-4]) mps=([-+]?\d+(?:\.\d+)?)/);
+  if (segment) {
+    segments[Number(segment[1]) - 1].textContent = Number(segment[2]).toFixed(3);
+    return;
+  }
+  const state = line.match(/^STATE sensor=([1-5]) blocked=([01])/);
   if (state) {
     setSensor(Number(state[1]) - 1, state[2] === "0");
     return;
   }
 
-  const status = line.match(/^STATUS rx1=(\d) rx2=(\d)/);
+  const status = line.match(/^STATUS blocked=([01]{5})/);
   if (status) {
-    setSensor(0, status[1] === "1");
-    setSensor(1, status[2] === "1");
+    [...status[1]].forEach((blocked, index) => setSensor(index, blocked === "0"));
     return;
   }
 
-  const velocity = line.match(/^VELOCITY .* mps=([-+]?\d+(?:\.\d+)?)/);
+  const velocity = line.match(/^VELOCITY .* mps=([-+]?\d+(?:\.\d+)?) v12=(\S+) v23=(\S+) v34=(\S+) v45=(\S+)/);
   if (velocity) {
+    if (!velocity.slice(1).every((value) => Number.isFinite(Number(value)))) return;
     currentVelocity = Number(velocity[1]).toFixed(3);
     velocityOutput.textContent = currentVelocity;
+    segments.forEach((output, index) => {
+      output.textContent = Number(velocity[index + 2]).toFixed(3);
+    });
     saveButton.disabled = false;
   }
 }
@@ -109,6 +123,7 @@ function send(command) {
 
 async function connect(selectedPort) {
   port = selectedPort;
+  readBuffer = "";
   try {
     await port.open({ baudRate: BAUD_RATE });
   } catch (error) {
@@ -192,7 +207,7 @@ async function scanPorts() {
 function updateDistance() {
   const distance = Number(distanceInput.value);
   if (!(distance > 0)) return;
-  localStorage.setItem("distanceMm", String(distance));
+  localStorage.setItem("spacingMm", String(distance));
   send(`distance ${distance}`);
 }
 
