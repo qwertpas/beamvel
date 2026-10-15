@@ -206,24 +206,40 @@ button.connected .connection-dot {
   color: #141613;
 }
 
-.segments {
-  display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 12px;
-  margin: 8px 0 28px;
-  color: #8a8d86;
-  font-size: 12px;
-}
-
-.segments div {
-  display: flex;
-  justify-content: center;
-  gap: 9px;
-}
-
-.segments output {
-  color: #51554d;
+#plot {
+  display: block;
+  width: 100%;
+  height: auto;
+  margin: 8px 0 24px;
+  overflow: visible;
+  font-size: 11px;
   font-variant-numeric: tabular-nums;
+}
+
+.plot-grid {
+  stroke: #e9e8e2;
+  stroke-width: 1;
+}
+
+.plot-label {
+  fill: #858981;
+}
+
+.plot-fit {
+  stroke: #7b9175;
+  stroke-width: 2;
+  fill: none;
+}
+
+.plot-point {
+  fill: #242921;
+  stroke: #fffefa;
+  stroke-width: 2;
+}
+
+.plot-number {
+  fill: #51554d;
+  font-size: 10px;
 }
 
 .trials {
@@ -412,14 +428,13 @@ td.notes:empty::before {
     font-size: 10px;
   }
 
-  .segments {
-    gap: 6px;
+  #plot {
+    margin-top: 0;
+    font-size: 20px;
   }
 
-  .segments div {
-    flex-direction: column;
-    align-items: center;
-    gap: 4px;
+  .plot-number {
+    font-size: 16px;
   }
 
   .velocity {

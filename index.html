@@ -6,7 +6,7 @@
     <meta name="theme-color" content="#f3f2ed" />
     <link rel="icon" href="data:," />
     <title>Beam Velocity</title>
-    <link rel="stylesheet" href="style.css?v=11" />
+    <link rel="stylesheet" href="style.css?v=12" />
   </head>
   <body>
     <main class="panel">
@@ -56,12 +56,7 @@
         <small>m/s</small>
       </output>
 
-      <div class="segments" aria-label="Interval velocities in meters per second">
-        <div><span>1–2</span><output id="v12">—</output></div>
-        <div><span>2–3</span><output id="v23">—</output></div>
-        <div><span>3–4</span><output id="v34">—</output></div>
-        <div><span>4–5</span><output id="v45">—</output></div>
-      </div>
+      <svg id="plot" viewBox="0 0 640 220" role="img" aria-label="Position versus time; waiting for a complete trial"></svg>
 
       <section class="trials">
         <div class="trial-actions">
@@ -83,6 +78,6 @@
         </div>
       </section>
     </main>
-    <script src="app.js?v=11"></script>
+    <script src="app.js?v=12"></script>
   </body>
 </html>

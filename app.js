@@ -10,7 +10,7 @@ const copyButton = document.querySelector("#copy");
 const clearButton = document.querySelector("#clear");
 const trialRows = document.querySelector("#trial-rows");
 const sensors = [...document.querySelectorAll(".sensor")];
-const segments = ["v12", "v23", "v34", "v45"].map((id) => document.getElementById(id));
+const plot = document.querySelector("#plot");
 const directionButtons = [...document.querySelectorAll(".direction-option")];
 
 let port;
@@ -51,16 +51,45 @@ function setSensor(index, isUnblocked) {
   sensor.querySelector("strong").textContent = isUnblocked ? "Unblocked" : "Blocked";
 }
 
+function drawPlot(reading) {
+  const left = 56, right = 620, top = 30, bottom = 178;
+  const spacing = reading?.spacing ?? Number(distanceInput.value);
+  const times = reading?.times;
+  const duration = times ? Math.max(...times) : 1;
+  const x = (time) => left + time / duration * (right - left);
+  const y = (position) => bottom - position / (4 * spacing) * (bottom - top);
+  const label = (value) => Number(value.toPrecision(3)).toString();
+  let drawing = `<defs><clipPath id="plot-area"><rect x="${left}" y="${top - 8}" width="${right - left}" height="${bottom - top + 16}"/></clipPath></defs>`;
+  drawing += `<text class="plot-label" x="${left}" y="12">Position (mm)</text>`;
+  for (let i = 0; i < 5; i++) {
+    const position = i * spacing;
+    drawing += `<line class="plot-grid" x1="${left}" y1="${y(position)}" x2="${right}" y2="${y(position)}"/>`;
+    drawing += `<text class="plot-label" x="${left - 10}" y="${y(position) + 4}" text-anchor="end">${label(position)}</text>`;
+  }
+  if (reading) {
+    for (const time of [0, duration / 2, duration]) {
+      drawing += `<text class="plot-label" x="${x(time)}" y="198" text-anchor="middle">${label(time)}</text>`;
+    }
+    // The inverse time-on-position fit passes through the measurement centroid.
+    const meanTime = times.reduce((sum, value) => sum + value, 0) / 5;
+    const fittedPosition = (time) => 2 * spacing + reading.velocity * (time - meanTime);
+    drawing += `<line class="plot-fit" clip-path="url(#plot-area)" x1="${left}" y1="${y(fittedPosition(0))}" x2="${right}" y2="${y(fittedPosition(duration))}"/>`;
+    times.forEach((time, sensor) => {
+      const px = x(time), py = y(sensor * spacing);
+      drawing += `<circle class="plot-point" cx="${px}" cy="${py}" r="4.5"><title>Sensor ${sensor + 1}: ${label(time)} ms, ${label(sensor * spacing)} mm</title></circle>`;
+      drawing += `<text class="plot-number" x="${px + (px > right - 20 ? -8 : 8)}" y="${py - 8}" text-anchor="${px > right - 20 ? "end" : "start"}">${sensor + 1}</text>`;
+    });
+  }
+  drawing += `<text class="plot-label" x="${(left + right) / 2}" y="218" text-anchor="middle">Time (ms)</text>`;
+  plot.innerHTML = drawing;
+  plot.setAttribute("aria-label", reading
+    ? `Position versus time: five sensor measurements; fitted slope ${reading.velocity.toFixed(3)} meters per second`
+    : "Position versus time; waiting for a complete trial");
+}
+
+drawPlot();
+
 function handleLine(line) {
-  if (line.startsWith("TRIAL ")) {
-    segments.forEach((output) => { output.textContent = "—"; });
-    return;
-  }
-  const segment = line.match(/^SEGMENT pair=([1-4]) mps=([-+]?\d+(?:\.\d+)?)/);
-  if (segment) {
-    segments[Number(segment[1]) - 1].textContent = Number(segment[2]).toFixed(3);
-    return;
-  }
   const state = line.match(/^STATE sensor=([1-5]) blocked=([01])/);
   if (state) {
     setSensor(Number(state[1]) - 1, state[2] === "0");
@@ -73,14 +102,22 @@ function handleLine(line) {
     return;
   }
 
-  const velocity = line.match(/^VELOCITY .* mps=([-+]?\d+(?:\.\d+)?) v12=(\S+) v23=(\S+) v34=(\S+) v45=(\S+)/);
-  if (velocity) {
-    if (!velocity.slice(1).every((value) => Number.isFinite(Number(value)))) return;
-    currentVelocity = Number(velocity[1]).toFixed(3);
+  if (line.startsWith("VELOCITY ")) {
+    const fields = Object.fromEntries(line.split(" ").slice(1).map((field) => field.split("=")));
+    const ticks = fields.ticks?.split(",").map(Number);
+    const spacing = Number(fields.spacing_mm);
+    const velocity = Number(fields.mps);
+    const direction = Number(fields.direction);
+    if (!ticks || ticks.length !== 5 || !ticks.every((tick) => Number.isInteger(tick) && tick >= 0 && tick <= 0xffffffff)
+        || !Number.isFinite(velocity) || !Number.isFinite(spacing) || spacing <= 0
+        || ![1, -1].includes(direction)) return;
+    const first = ticks[direction > 0 ? 0 : 4];
+    const times = ticks.map((tick) => ((tick - first) >>> 0) / 80000);
+    const ordered = direction > 0 ? times : [...times].reverse();
+    if (ordered[4] > 5000 || ordered.some((time, i) => i > 0 && time <= ordered[i - 1])) return;
+    currentVelocity = velocity.toFixed(3);
     velocityOutput.textContent = currentVelocity;
-    segments.forEach((output, index) => {
-      output.textContent = Number(velocity[index + 2]).toFixed(3);
-    });
+    drawPlot({ times, spacing, velocity });
     saveButton.disabled = false;
   }
 }
