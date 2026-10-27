@@ -260,14 +260,16 @@ button.connected .connection-dot {
   gap: 8px;
 }
 
-#copy {
+#copy,
+#export {
   min-width: 76px;
   justify-content: center;
   background: #e8e7e1;
   color: #393c37;
 }
 
-#copy:hover {
+#copy:hover,
+#export:hover:not(:disabled) {
   background: #deddd7;
 }
 
@@ -483,8 +485,14 @@ td:nth-child(n+4) {
   font-variant-numeric: tabular-nums;
 }
 
-.vertical {
-  margin: 14px 0 0;
+.motion {
+  display: flex;
+  gap: 20px;
+  margin-top: 14px;
+}
+
+.motion .checkbox {
+  margin: 0;
 }
 
 .vertical:has(input:disabled) {

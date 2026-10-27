@@ -6,9 +6,11 @@ const connectButton = document.querySelector("#connect");
 const connectionLabel = document.querySelector(".connection-label");
 const distanceInput = document.querySelector("#distance");
 const verticalInput = document.querySelector("#vertical");
+const upDownInput = document.querySelector("#up-down");
 const velocityOutput = document.querySelector("#velocity");
 const saveButton = document.querySelector("#save");
 const copyButton = document.querySelector("#copy");
+const exportButton = document.querySelector("#export");
 const clearButton = document.querySelector("#clear");
 const savePoints = document.querySelector("#save-points");
 const trialRows = document.querySelector("#trial-rows");
@@ -31,6 +33,8 @@ if (savedDistance) distanceInput.value = savedDistance;
 
 verticalInput.checked = localStorage.getItem("vertical") === "true";
 
+upDownInput.checked = localStorage.getItem("upDown") === "true";
+
 let selectedDirection = localStorage.getItem("travelDirection") ?? "both";
 if (!["15", "51", "both"].includes(selectedDirection)) selectedDirection = "both";
 
@@ -42,8 +46,17 @@ function selectDirection(direction, transmit = true) {
   });
   verticalInput.disabled = direction === "both";
   if (verticalInput.disabled) verticalInput.checked = false;
+  updateModes();
   updateReading();
-  if (transmit) send(`direction ${direction}`);
+  if (transmit) {
+    send(`direction ${direction}`);
+    send(`updown ${Number(upDownInput.checked)}`);
+  }
+}
+
+function updateModes() {
+  upDownInput.disabled = !verticalInput.checked || verticalInput.disabled;
+  if (upDownInput.disabled) upDownInput.checked = false;
 }
 
 selectDirection(selectedDirection, false);
@@ -61,14 +74,17 @@ function setSensor(index, isUnblocked) {
 }
 
 // Fit arrival times, including the first timestamp's uncertainty. Positions are meters.
-function fitVertical(times, positions) {
+function fitVertical(times, positions, descending = []) {
   const seconds = times.map((time) => time / 1000);
   const heights = positions.map((position) => position / 1000);
-  const arrival = (inverseSpeed, height) => 2 * height * inverseSpeed
-    / (1 + Math.sqrt(Math.max(0, 1 - 2 * GRAVITY * height * inverseSpeed ** 2)));
+  const arrival = (inverseSpeed, height, down) => {
+    const root = Math.sqrt(Math.max(0, 1 - 2 * GRAVITY * height * inverseSpeed ** 2));
+    return down ? (1 + root) / (GRAVITY * inverseSpeed)
+      : 2 * height * inverseSpeed / (1 + root);
+  };
   function evaluate(inverseSpeed) {
-    const offsets = seconds.map((time, i) => time - arrival(inverseSpeed, heights[i]));
-    const start = offsets.reduce((sum, value) => sum + value, 0) / 5;
+    const offsets = seconds.map((time, i) => time - arrival(inverseSpeed, heights[i], descending[i]));
+    const start = offsets.reduce((sum, value) => sum + value, 0) / times.length;
     const error = offsets.reduce((sum, value) => sum + (value - start) ** 2, 0);
     return { start, error };
   }
@@ -87,9 +103,9 @@ function fitVertical(times, positions) {
 
 function updateReading() {
   if (!currentReading) return;
-  currentReading.vertical = verticalInput.checked && selectedDirection !== "both";
+  currentReading.vertical = currentReading.upDown || (verticalInput.checked && selectedDirection !== "both");
   if (currentReading.vertical) {
-    Object.assign(currentReading, fitVertical(currentReading.times, currentReading.positions));
+    Object.assign(currentReading, fitVertical(currentReading.times, currentReading.positions, currentReading.descending));
   } else {
     currentReading.velocity = currentReading.baseVelocity;
   }
@@ -104,7 +120,9 @@ function drawPlot(reading) {
   const times = reading?.times;
   const duration = times ? Math.max(...times) : 1;
   const x = (time) => left + time / duration * (right - left);
-  const y = (position) => bottom - position / (4 * spacing) * (bottom - top);
+  const height = reading?.upDown
+    ? Math.max(4 * spacing, 1000 * reading.velocity ** 2 / (2 * GRAVITY)) : 4 * spacing;
+  const y = (position) => bottom - position / height * (bottom - top);
   const label = (value) => Number(value.toPrecision(3)).toString();
   let drawing = `<defs><clipPath id="plot-area"><rect x="${left}" y="${top - 8}" width="${right - left}" height="${bottom - top + 16}"/></clipPath></defs>`;
   drawing += `<text class="plot-label" x="${left}" y="12">Position (mm)</text>`;
@@ -118,7 +136,7 @@ function drawPlot(reading) {
       drawing += `<text class="plot-label" x="${x(time)}" y="198" text-anchor="middle">${label(time)}</text>`;
     }
     // The inverse time-on-position fit passes through the measurement centroid.
-    const meanTime = times.reduce((sum, value) => sum + value, 0) / 5;
+    const meanTime = times.reduce((sum, value) => sum + value, 0) / times.length;
     const fittedPosition = (time) => {
       if (!reading.vertical) return 2 * spacing + reading.velocity * (time - meanTime);
       const elapsed = time / 1000 - reading.start;
@@ -128,8 +146,9 @@ function drawPlot(reading) {
     const start = fittedPosition(0), end = fittedPosition(duration);
     const control = 2 * fittedPosition(duration / 2) - (start + end) / 2;
     drawing += `<path class="plot-fit" clip-path="url(#plot-area)" d="M ${left} ${y(start)} Q ${(left + right) / 2} ${y(control)} ${right} ${y(end)}"/>`;
-    times.forEach((time, sensor) => {
-      const position = reading.positions[sensor];
+    times.forEach((time, i) => {
+      const sensor = reading.sensors[i];
+      const position = reading.positions[i];
       const px = x(time), py = y(position);
       drawing += `<circle class="plot-point" cx="${px}" cy="${py}" r="4.5"><title>Sensor ${sensor + 1}: ${label(time)} ms, ${label(position)} mm</title></circle>`;
       drawing += `<text class="plot-number" x="${px + (px > right - 20 ? -8 : 8)}" y="${py - 8}" text-anchor="${px > right - 20 ? "end" : "start"}">${sensor + 1}</text>`;
@@ -138,7 +157,7 @@ function drawPlot(reading) {
   drawing += `<text class="plot-label" x="${(left + right) / 2}" y="218" text-anchor="middle">Time (ms)</text>`;
   plot.innerHTML = drawing;
   plot.setAttribute("aria-label", reading
-    ? `Position versus time: five sensor measurements; ${reading.vertical ? "upward gravity fit; first-sensor velocity" : "constant velocity fit; velocity"} ${reading.velocity.toFixed(3)} meters per second`
+    ? `Position versus time: ${times.length} sensor measurements; ${reading.vertical ? "gravity fit; first-sensor velocity" : "constant velocity fit; velocity"} ${reading.velocity.toFixed(3)} meters per second`
     : "Position versus time; waiting for a complete trial");
 }
 
@@ -157,6 +176,31 @@ function handleLine(line) {
     return;
   }
 
+  if (line.startsWith("TRAJECTORY ")) {
+    const fields = Object.fromEntries(line.split(" ").slice(1).map((field) => field.split("=")));
+    const up = fields.up?.split(",").map(Number);
+    const down = fields.down?.split(",").map(Number);
+    const spacing = Number(fields.spacing_mm);
+    const direction = Number(fields.direction);
+    if (!up || !down || up.length < 2 || up.length > 5 || down.length !== up.length
+        || !Number.isFinite(spacing) || spacing <= 0 || ![1, -1].includes(direction)) return;
+    const ticks = [...up, ...down];
+    if (!ticks.every((tick) => Number.isInteger(tick) && tick >= 0 && tick <= 0xffffffff)) return;
+    const times = ticks.map((tick) => ((tick - ticks[0]) >>> 0) / 80000);
+    if (times.at(-1) > 5000 || times.some((time, i) => i > 0 && time <= times[i - 1])) return;
+    const steps = up.map((_, i) => i);
+    steps.push(...[...steps].reverse());
+    const positions = steps.map((step) => step * spacing);
+    const sensors = steps.map((step) => direction > 0 ? step : 4 - step);
+    const descending = times.map((_, i) => i >= up.length);
+    // Backdate receipt by the hardware-measured passage duration.
+    const firstCrossing = new Date(Date.now() - Math.max(...times)).toISOString();
+    currentReading = { times, positions, sensors, descending, spacing, upDown: true, firstCrossing };
+    updateReading();
+    saveButton.disabled = false;
+    return;
+  }
+
   if (line.startsWith("VELOCITY ")) {
     const fields = Object.fromEntries(line.split(" ").slice(1).map((field) => field.split("=")));
     const ticks = fields.ticks?.split(",").map(Number);
@@ -171,7 +215,8 @@ function handleLine(line) {
     const ordered = direction > 0 ? times : [...times].reverse();
     if (ordered[4] > 5000 || ordered.some((time, i) => i > 0 && time <= ordered[i - 1])) return;
     const positions = times.map((_, sensor) => (direction > 0 ? sensor : 4 - sensor) * spacing);
-    currentReading = { times, positions, spacing, baseVelocity: velocity };
+    const firstCrossing = new Date(Date.now() - Math.max(...times)).toISOString();
+    currentReading = { times, positions, sensors: [0, 1, 2, 3, 4], spacing, baseVelocity: velocity, firstCrossing };
     updateReading();
     saveButton.disabled = false;
   }
@@ -225,6 +270,7 @@ async function connect(selectedPort) {
   setConnected(true);
   await send(`distance ${distanceInput.value}`);
   await send(`direction ${selectedDirection}`);
+  await send(`updown ${Number(upDownInput.checked)}`);
   await send("status");
   readTask = readSerial().finally(() => {
     if (!disconnecting) setConnected(false);
@@ -305,7 +351,13 @@ function updateDistance() {
 
 verticalInput.addEventListener("change", () => {
   localStorage.setItem("vertical", String(verticalInput.checked));
+  updateModes();
+  send(`updown ${Number(upDownInput.checked)}`);
   updateReading();
+});
+upDownInput.addEventListener("change", () => {
+  localStorage.setItem("upDown", String(upDownInput.checked));
+  send(`updown ${Number(upDownInput.checked)}`);
 });
 connectButton.addEventListener("click", choosePort);
 distanceInput.addEventListener("change", updateDistance);
@@ -331,19 +383,40 @@ saveButton.addEventListener("click", () => {
   notes.className = "notes";
   notes.contentEditable = "true";
   notes.spellcheck = false;
-  row.insertCell().textContent = currentReading.vertical ? "Yes" : "No";
+  row.insertCell().textContent = currentReading.upDown ? "Up & down" : currentReading.vertical ? "Yes" : "No";
   row.insertCell().textContent = savePoints.checked ? String(currentReading.spacing) : "";
-  for (const time of currentReading.times) {
-    row.insertCell().textContent = savePoints.checked ? String(time) : "";
+  for (const down of [false, true]) {
+    for (let sensor = 0; sensor < 5; sensor++) {
+      const i = currentReading.sensors.findIndex((value, index) => value === sensor
+        && Boolean(currentReading.descending?.[index]) === down);
+      row.insertCell().textContent = savePoints.checked && i >= 0 ? String(currentReading.times[i]) : "";
+    }
   }
+  row.insertCell().textContent = currentReading.firstCrossing;
   row.scrollIntoView({ block: "nearest" });
   clearButton.disabled = false;
+  exportButton.disabled = false;
 });
+
+function tableData() {
+  return [
+    [...document.querySelectorAll("thead th")].map((cell) => cell.textContent.trim()),
+    ...[...trialRows.rows].map((row) => [...row.cells].map((cell) => cell.textContent.trim())),
+  ];
+}
+
+exportButton.addEventListener("click", () => {
+  const csv = tableData().map((row) => row.map((value) => `"${value.replaceAll('"', '""')}"`).join(",")).join("\r\n") + "\r\n";
+  const url = URL.createObjectURL(new Blob([csv], { type: "text/csv;charset=utf-8" }));
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = "beamvel.csv";
+  link.click();
+  setTimeout(() => URL.revokeObjectURL(url), 0);
+});
+
 copyButton.addEventListener("click", async () => {
-  const lines = [[...document.querySelectorAll("thead th")].map((cell) => cell.textContent.trim())];
-  for (const row of trialRows.rows) {
-    lines.push([...row.cells].map((cell) => cell.textContent.trim().replace(/\s+/g, " ")));
-  }
+  const lines = tableData().map((row) => row.map((value) => value.replace(/\s+/g, " ")));
   try {
     await navigator.clipboard.writeText(lines.map((line) => line.join("\t")).join("\n"));
     copyButton.textContent = "Copied";
@@ -360,6 +433,7 @@ clearButton.addEventListener("click", () => {
   trialRows.replaceChildren();
   trialCount = 0;
   clearButton.disabled = true;
+  exportButton.disabled = true;
 });
 
 if ("serial" in navigator) {

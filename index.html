@@ -6,7 +6,7 @@
     <meta name="theme-color" content="#f3f2ed" />
     <link rel="icon" href="data:," />
     <title>Beam Velocity</title>
-    <link rel="stylesheet" href="style.css?v=15" />
+    <link rel="stylesheet" href="style.css?v=18" />
   </head>
   <body>
     <main class="panel">
@@ -29,7 +29,10 @@
         </button>
       </div>
 
-      <label class="checkbox vertical"><input id="vertical" type="checkbox" />Vertical</label>
+      <div class="motion">
+        <label class="checkbox vertical"><input id="vertical" type="checkbox" />Vertical</label>
+        <label class="checkbox vertical"><input id="up-down" type="checkbox" disabled />Up &amp; down</label>
+      </div>
 
       <section class="sensors" aria-label="Beam states">
         <div class="sensor" id="sensor1">
@@ -65,6 +68,7 @@
         <div class="trial-actions">
           <button id="save" type="button" disabled>Save</button>
           <button id="copy" type="button">Copy</button>
+          <button id="export" type="button" disabled>Export CSV</button>
           <button id="clear" type="button" disabled>Clear</button>
         </div>
         <div class="table-wrap">
@@ -81,6 +85,12 @@
                 <th>Sensor 3 (ms)</th>
                 <th>Sensor 4 (ms)</th>
                 <th>Sensor 5 (ms)</th>
+                <th>Return 1 (ms)</th>
+                <th>Return 2 (ms)</th>
+                <th>Return 3 (ms)</th>
+                <th>Return 4 (ms)</th>
+                <th>Return 5 (ms)</th>
+                <th>First crossing (UTC)</th>
               </tr>
             </thead>
             <tbody id="trial-rows"></tbody>
@@ -88,6 +98,6 @@
         </div>
       </section>
     </main>
-    <script src="app.js?v=15"></script>
+    <script src="app.js?v=18"></script>
   </body>
 </html>
