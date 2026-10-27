@@ -1,9 +1,11 @@
 const BAUD_RATE = 2_000_000;
+const GRAVITY = 9.80665;
 const ESPRESSIF_VENDOR_ID = 0x303a;
 
 const connectButton = document.querySelector("#connect");
 const connectionLabel = document.querySelector(".connection-label");
 const distanceInput = document.querySelector("#distance");
+const verticalInput = document.querySelector("#vertical");
 const velocityOutput = document.querySelector("#velocity");
 const saveButton = document.querySelector("#save");
 const copyButton = document.querySelector("#copy");
@@ -27,6 +29,8 @@ let trialCount = 0;
 const savedDistance = localStorage.getItem("spacingMm");
 if (savedDistance) distanceInput.value = savedDistance;
 
+verticalInput.checked = localStorage.getItem("vertical") === "true";
+
 let selectedDirection = localStorage.getItem("travelDirection") ?? "both";
 if (!["15", "51", "both"].includes(selectedDirection)) selectedDirection = "both";
 
@@ -36,6 +40,9 @@ function selectDirection(direction, transmit = true) {
   directionButtons.forEach((button) => {
     button.classList.toggle("active", button.dataset.direction === direction);
   });
+  verticalInput.disabled = direction === "both";
+  if (verticalInput.disabled) verticalInput.checked = false;
+  updateReading();
   if (transmit) send(`direction ${direction}`);
 }
 
@@ -51,6 +58,44 @@ function setSensor(index, isUnblocked) {
   sensor.classList.toggle("unblocked", isUnblocked);
   sensor.classList.toggle("blocked", !isUnblocked);
   sensor.querySelector("strong").textContent = isUnblocked ? "Unblocked" : "Blocked";
+}
+
+// Fit arrival times, including the first timestamp's uncertainty. Positions are meters.
+function fitVertical(times, positions) {
+  const seconds = times.map((time) => time / 1000);
+  const heights = positions.map((position) => position / 1000);
+  const arrival = (inverseSpeed, height) => 2 * height * inverseSpeed
+    / (1 + Math.sqrt(Math.max(0, 1 - 2 * GRAVITY * height * inverseSpeed ** 2)));
+  function evaluate(inverseSpeed) {
+    const offsets = seconds.map((time, i) => time - arrival(inverseSpeed, heights[i]));
+    const start = offsets.reduce((sum, value) => sum + value, 0) / 5;
+    const error = offsets.reduce((sum, value) => sum + (value - start) ** 2, 0);
+    return { start, error };
+  }
+  // Reciprocal speed gives a finite search interval, from infinite speed to
+  // just enough speed to reach the highest sensor on the upward passage.
+  let low = 0, high = 1 / Math.sqrt(2 * GRAVITY * Math.max(...heights));
+  for (let i = 0; i < 100; i++) {
+    const a = low + (high - low) / 3;
+    const b = high - (high - low) / 3;
+    if (evaluate(a).error < evaluate(b).error) high = b;
+    else low = a;
+  }
+  const inverseSpeed = (low + high) / 2;
+  return { velocity: 1 / inverseSpeed, start: evaluate(inverseSpeed).start };
+}
+
+function updateReading() {
+  if (!currentReading) return;
+  currentReading.vertical = verticalInput.checked && selectedDirection !== "both";
+  if (currentReading.vertical) {
+    Object.assign(currentReading, fitVertical(currentReading.times, currentReading.positions));
+  } else {
+    currentReading.velocity = currentReading.baseVelocity;
+  }
+  currentVelocity = currentReading.velocity.toFixed(3);
+  velocityOutput.textContent = currentVelocity;
+  drawPlot(currentReading);
 }
 
 function drawPlot(reading) {
@@ -74,8 +119,15 @@ function drawPlot(reading) {
     }
     // The inverse time-on-position fit passes through the measurement centroid.
     const meanTime = times.reduce((sum, value) => sum + value, 0) / 5;
-    const fittedPosition = (time) => 2 * spacing + reading.velocity * (time - meanTime);
-    drawing += `<line class="plot-fit" clip-path="url(#plot-area)" x1="${left}" y1="${y(fittedPosition(0))}" x2="${right}" y2="${y(fittedPosition(duration))}"/>`;
+    const fittedPosition = (time) => {
+      if (!reading.vertical) return 2 * spacing + reading.velocity * (time - meanTime);
+      const elapsed = time / 1000 - reading.start;
+      return 1000 * (reading.velocity * elapsed - GRAVITY * elapsed ** 2 / 2);
+    };
+    // A quadratic Bézier represents the constant-gravity trajectory exactly.
+    const start = fittedPosition(0), end = fittedPosition(duration);
+    const control = 2 * fittedPosition(duration / 2) - (start + end) / 2;
+    drawing += `<path class="plot-fit" clip-path="url(#plot-area)" d="M ${left} ${y(start)} Q ${(left + right) / 2} ${y(control)} ${right} ${y(end)}"/>`;
     times.forEach((time, sensor) => {
       const position = reading.positions[sensor];
       const px = x(time), py = y(position);
@@ -86,7 +138,7 @@ function drawPlot(reading) {
   drawing += `<text class="plot-label" x="${(left + right) / 2}" y="218" text-anchor="middle">Time (ms)</text>`;
   plot.innerHTML = drawing;
   plot.setAttribute("aria-label", reading
-    ? `Position versus time: five sensor measurements; fitted slope ${reading.velocity.toFixed(3)} meters per second`
+    ? `Position versus time: five sensor measurements; ${reading.vertical ? "upward gravity fit; first-sensor velocity" : "constant velocity fit; velocity"} ${reading.velocity.toFixed(3)} meters per second`
     : "Position versus time; waiting for a complete trial");
 }
 
@@ -118,11 +170,9 @@ function handleLine(line) {
     const times = ticks.map((tick) => ((tick - first) >>> 0) / 80000);
     const ordered = direction > 0 ? times : [...times].reverse();
     if (ordered[4] > 5000 || ordered.some((time, i) => i > 0 && time <= ordered[i - 1])) return;
-    currentVelocity = velocity.toFixed(3);
-    velocityOutput.textContent = currentVelocity;
     const positions = times.map((_, sensor) => (direction > 0 ? sensor : 4 - sensor) * spacing);
-    currentReading = { times, positions, spacing, velocity };
-    drawPlot(currentReading);
+    currentReading = { times, positions, spacing, baseVelocity: velocity };
+    updateReading();
     saveButton.disabled = false;
   }
 }
@@ -253,6 +303,10 @@ function updateDistance() {
   send(`distance ${distance}`);
 }
 
+verticalInput.addEventListener("change", () => {
+  localStorage.setItem("vertical", String(verticalInput.checked));
+  updateReading();
+});
 connectButton.addEventListener("click", choosePort);
 distanceInput.addEventListener("change", updateDistance);
 distanceInput.addEventListener("keydown", (event) => {
@@ -277,6 +331,7 @@ saveButton.addEventListener("click", () => {
   notes.className = "notes";
   notes.contentEditable = "true";
   notes.spellcheck = false;
+  row.insertCell().textContent = currentReading.vertical ? "Yes" : "No";
   row.insertCell().textContent = savePoints.checked ? String(currentReading.spacing) : "";
   for (const time of currentReading.times) {
     row.insertCell().textContent = savePoints.checked ? String(time) : "";

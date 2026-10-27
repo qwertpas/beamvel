@@ -309,7 +309,7 @@ table {
   width: 100%;
   border-collapse: collapse;
   table-layout: fixed;
-  min-width: 1538px;
+  min-width: 1638px;
   color: #292b27;
   font-size: 13px;
 }
@@ -457,7 +457,7 @@ td.notes:empty::before {
   }
 }
 
-.save-points {
+.checkbox {
   display: flex;
   align-items: center;
   gap: 8px;
@@ -466,7 +466,7 @@ td.notes:empty::before {
   color: #666a64;
 }
 
-.save-points input {
+.checkbox input {
   width: 16px;
   height: 16px;
   accent-color: #1c1f1b;
@@ -481,4 +481,17 @@ th:nth-child(n+4),
 td:nth-child(n+4) {
   width: 200px;
   font-variant-numeric: tabular-nums;
+}
+
+.vertical {
+  margin: 14px 0 0;
+}
+
+.vertical:has(input:disabled) {
+  opacity: 0.5;
+}
+
+th:nth-child(4),
+td:nth-child(4) {
+  width: 100px;
 }

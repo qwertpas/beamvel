@@ -6,7 +6,7 @@
     <meta name="theme-color" content="#f3f2ed" />
     <link rel="icon" href="data:," />
     <title>Beam Velocity</title>
-    <link rel="stylesheet" href="style.css?v=14" />
+    <link rel="stylesheet" href="style.css?v=15" />
   </head>
   <body>
     <main class="panel">
@@ -28,6 +28,8 @@
           <span class="connection-label">Connect</span>
         </button>
       </div>
+
+      <label class="checkbox vertical"><input id="vertical" type="checkbox" />Vertical</label>
 
       <section class="sensors" aria-label="Beam states">
         <div class="sensor" id="sensor1">
@@ -58,7 +60,7 @@
 
       <svg id="plot" viewBox="0 0 640 220" role="img" aria-label="Position versus time; waiting for a complete trial"></svg>
 
-      <label class="save-points"><input id="save-points" type="checkbox" checked />Save spacing &amp; timestamps</label>
+      <label class="checkbox"><input id="save-points" type="checkbox" checked />Save spacing &amp; timestamps</label>
       <section class="trials">
         <div class="trial-actions">
           <button id="save" type="button" disabled>Save</button>
@@ -72,6 +74,7 @@
                 <th>#</th>
                 <th>Velocity</th>
                 <th>Notes</th>
+                <th>Vertical</th>
                 <th>Spacing (mm)</th>
                 <th>Sensor 1 (ms)</th>
                 <th>Sensor 2 (ms)</th>
@@ -85,6 +88,6 @@
         </div>
       </section>
     </main>
-    <script src="app.js?v=14"></script>
+    <script src="app.js?v=15"></script>
   </body>
 </html>
