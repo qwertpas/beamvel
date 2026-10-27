@@ -277,9 +277,9 @@ saveButton.addEventListener("click", () => {
   notes.className = "notes";
   notes.contentEditable = "true";
   notes.spellcheck = false;
-  for (let sensor = 0; sensor < 5; sensor++) {
-    row.insertCell().textContent = savePoints.checked
-      ? `${currentReading.positions[sensor]}, ${currentReading.times[sensor]}` : "";
+  row.insertCell().textContent = savePoints.checked ? String(currentReading.spacing) : "";
+  for (const time of currentReading.times) {
+    row.insertCell().textContent = savePoints.checked ? String(time) : "";
   }
   row.scrollIntoView({ block: "nearest" });
   clearButton.disabled = false;
