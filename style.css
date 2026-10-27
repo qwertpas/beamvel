@@ -244,7 +244,7 @@ button.connected .connection-dot {
 
 .trials {
   display: grid;
-  grid-template-columns: auto 1fr;
+  grid-template-columns: auto minmax(0, 1fr);
   align-items: start;
   gap: 12px;
 }
@@ -309,6 +309,7 @@ table {
   width: 100%;
   border-collapse: collapse;
   table-layout: fixed;
+  min-width: 1338px;
   color: #292b27;
   font-size: 13px;
 }
@@ -454,4 +455,30 @@ td.notes:empty::before {
   .table-wrap {
     height: 180px;
   }
+}
+
+.save-points {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 12px;
+  font-size: 13px;
+  color: #666a64;
+}
+
+.save-points input {
+  width: 16px;
+  height: 16px;
+  accent-color: #1c1f1b;
+}
+
+th:nth-child(3),
+td:nth-child(3) {
+  width: 180px;
+}
+
+th:nth-child(n+4),
+td:nth-child(n+4) {
+  width: 200px;
+  font-variant-numeric: tabular-nums;
 }

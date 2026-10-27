@@ -6,7 +6,7 @@
     <meta name="theme-color" content="#f3f2ed" />
     <link rel="icon" href="data:," />
     <title>Beam Velocity</title>
-    <link rel="stylesheet" href="style.css?v=12" />
+    <link rel="stylesheet" href="style.css?v=13" />
   </head>
   <body>
     <main class="panel">
@@ -58,6 +58,7 @@
 
       <svg id="plot" viewBox="0 0 640 220" role="img" aria-label="Position versus time; waiting for a complete trial"></svg>
 
+      <label class="save-points"><input id="save-points" type="checkbox" checked />Save positions &amp; timestamps</label>
       <section class="trials">
         <div class="trial-actions">
           <button id="save" type="button" disabled>Save</button>
@@ -71,6 +72,11 @@
                 <th>#</th>
                 <th>Velocity</th>
                 <th>Notes</th>
+                <th>Sensor 1 (mm, ms)</th>
+                <th>Sensor 2 (mm, ms)</th>
+                <th>Sensor 3 (mm, ms)</th>
+                <th>Sensor 4 (mm, ms)</th>
+                <th>Sensor 5 (mm, ms)</th>
               </tr>
             </thead>
             <tbody id="trial-rows"></tbody>
@@ -78,6 +84,6 @@
         </div>
       </section>
     </main>
-    <script src="app.js?v=12"></script>
+    <script src="app.js?v=13"></script>
   </body>
 </html>

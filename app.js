@@ -8,6 +8,7 @@ const velocityOutput = document.querySelector("#velocity");
 const saveButton = document.querySelector("#save");
 const copyButton = document.querySelector("#copy");
 const clearButton = document.querySelector("#clear");
+const savePoints = document.querySelector("#save-points");
 const trialRows = document.querySelector("#trial-rows");
 const sensors = [...document.querySelectorAll(".sensor")];
 const plot = document.querySelector("#plot");
@@ -20,6 +21,7 @@ let readBuffer = "";
 let disconnecting = false;
 let writeQueue = Promise.resolve();
 let currentVelocity;
+let currentReading;
 let trialCount = 0;
 
 const savedDistance = localStorage.getItem("spacingMm");
@@ -75,8 +77,9 @@ function drawPlot(reading) {
     const fittedPosition = (time) => 2 * spacing + reading.velocity * (time - meanTime);
     drawing += `<line class="plot-fit" clip-path="url(#plot-area)" x1="${left}" y1="${y(fittedPosition(0))}" x2="${right}" y2="${y(fittedPosition(duration))}"/>`;
     times.forEach((time, sensor) => {
-      const px = x(time), py = y(sensor * spacing);
-      drawing += `<circle class="plot-point" cx="${px}" cy="${py}" r="4.5"><title>Sensor ${sensor + 1}: ${label(time)} ms, ${label(sensor * spacing)} mm</title></circle>`;
+      const position = reading.positions[sensor];
+      const px = x(time), py = y(position);
+      drawing += `<circle class="plot-point" cx="${px}" cy="${py}" r="4.5"><title>Sensor ${sensor + 1}: ${label(time)} ms, ${label(position)} mm</title></circle>`;
       drawing += `<text class="plot-number" x="${px + (px > right - 20 ? -8 : 8)}" y="${py - 8}" text-anchor="${px > right - 20 ? "end" : "start"}">${sensor + 1}</text>`;
     });
   }
@@ -106,7 +109,7 @@ function handleLine(line) {
     const fields = Object.fromEntries(line.split(" ").slice(1).map((field) => field.split("=")));
     const ticks = fields.ticks?.split(",").map(Number);
     const spacing = Number(fields.spacing_mm);
-    const velocity = Number(fields.mps);
+    const velocity = Math.abs(Number(fields.mps));
     const direction = Number(fields.direction);
     if (!ticks || ticks.length !== 5 || !ticks.every((tick) => Number.isInteger(tick) && tick >= 0 && tick <= 0xffffffff)
         || !Number.isFinite(velocity) || !Number.isFinite(spacing) || spacing <= 0
@@ -117,7 +120,9 @@ function handleLine(line) {
     if (ordered[4] > 5000 || ordered.some((time, i) => i > 0 && time <= ordered[i - 1])) return;
     currentVelocity = velocity.toFixed(3);
     velocityOutput.textContent = currentVelocity;
-    drawPlot({ times, spacing, velocity });
+    const positions = times.map((_, sensor) => (direction > 0 ? sensor : 4 - sensor) * spacing);
+    currentReading = { times, positions, spacing, velocity };
+    drawPlot(currentReading);
     saveButton.disabled = false;
   }
 }
@@ -272,11 +277,15 @@ saveButton.addEventListener("click", () => {
   notes.className = "notes";
   notes.contentEditable = "true";
   notes.spellcheck = false;
+  for (let sensor = 0; sensor < 5; sensor++) {
+    row.insertCell().textContent = savePoints.checked
+      ? `${currentReading.positions[sensor]}, ${currentReading.times[sensor]}` : "";
+  }
   row.scrollIntoView({ block: "nearest" });
   clearButton.disabled = false;
 });
 copyButton.addEventListener("click", async () => {
-  const lines = [["#", "Velocity", "Notes"]];
+  const lines = [[...document.querySelectorAll("thead th")].map((cell) => cell.textContent.trim())];
   for (const row of trialRows.rows) {
     lines.push([...row.cells].map((cell) => cell.textContent.trim().replace(/\s+/g, " ")));
   }
